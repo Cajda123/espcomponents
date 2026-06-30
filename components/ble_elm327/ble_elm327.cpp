@@ -226,7 +226,7 @@ bool BleElm327Component::send_command(const std::string &cmd) {
   auto *chr = this->parent_->get_characteristic(service_uuid_, tx_char_uuid_);
   if (chr == nullptr) { ESP_LOGW(TAG, "TX characteristic missing"); return false; }
   chr->write_value(reinterpret_cast<uint8_t *>(const_cast<char *>(cmd.data())), cmd.size(),
-                   ESP_GATT_WRITE_TYPE_NO_RSP);
+                   ESP_GATT_WRITE_TYPE_RSP);
   ESP_LOGD(TAG, ">> %s", cmd.c_str());
   return true;
 }
