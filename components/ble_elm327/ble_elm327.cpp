@@ -159,7 +159,7 @@ void BleElm327Component::gattc_event_handler(esp_gattc_cb_event_t event, esp_gat
       current_pre_commands_.clear();
       ESP_LOGW(TAG, "Disconnected from ELM327");
       break;
-
+      
     case ESP_GATTC_SEARCH_CMPL_EVT: {
       auto *rx_chr = this->parent_->get_characteristic(service_uuid_, rx_char_uuid_);
       if (rx_chr == nullptr) { ESP_LOGW(TAG, "RX characteristic not found"); break; }
@@ -182,16 +182,16 @@ void BleElm327Component::gattc_event_handler(esp_gattc_cb_event_t event, esp_gat
       }
     
       uint16_t notify_en = 1;
-      esp_ble_gattc_write_char_descr(
+      auto status = esp_ble_gattc_write_char_descr(
           gattc_if_,
-          param->reg_for_notify.conn_id,
+          this->parent_->get_conn_id(),
           param->reg_for_notify.handle + 1,
           sizeof(notify_en),
           reinterpret_cast<uint8_t *>(&notify_en),
           ESP_GATT_WRITE_TYPE_RSP,
           ESP_GATT_AUTH_REQ_NONE);
     
-      ESP_LOGI(TAG, "Notify registered, CCCD enable written");
+      ESP_LOGI(TAG, "Notify registered, CCCD enable write status=%d", status);
     
       last_tx_time_ = millis();
       elm_state_ = ElmState::CONNECTED;
@@ -204,6 +204,7 @@ void BleElm327Component::gattc_event_handler(esp_gattc_cb_event_t event, esp_gat
                (unsigned)(sizeof(BASE_INIT_COMMANDS) / sizeof(BASE_INIT_COMMANDS[0])),
                (unsigned) extra_init_commands_.size());
       break;
+    }
 
     case ESP_GATTC_NOTIFY_EVT:
       if (param->notify.handle == rx_char_handle_)
