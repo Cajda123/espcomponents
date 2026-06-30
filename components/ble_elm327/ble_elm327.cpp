@@ -175,11 +175,24 @@ void BleElm327Component::gattc_event_handler(esp_gattc_cb_event_t event, esp_gat
       break;
     }
 
-    case ESP_GATTC_REG_FOR_NOTIFY_EVT:
+    case ESP_GATTC_REG_FOR_NOTIFY_EVT: {
       if (param->reg_for_notify.status != ESP_GATT_OK) {
         ESP_LOGW(TAG, "Notify registration failed: %d", param->reg_for_notify.status);
         break;
       }
+    
+      uint16_t notify_en = 1;
+      esp_ble_gattc_write_char_descr(
+          gattc_if_,
+          param->reg_for_notify.conn_id,
+          param->reg_for_notify.handle + 1,
+          sizeof(notify_en),
+          reinterpret_cast<uint8_t *>(&notify_en),
+          ESP_GATT_WRITE_TYPE_RSP,
+          ESP_GATT_AUTH_REQ_NONE);
+    
+      ESP_LOGI(TAG, "Notify registered, CCCD enable written");
+    
       last_tx_time_ = millis();
       elm_state_ = ElmState::CONNECTED;
       for (const char *cmd : BASE_INIT_COMMANDS) {
