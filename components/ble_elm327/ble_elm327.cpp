@@ -242,7 +242,7 @@ void BleElm327Component::on_notify(const uint8_t *data, uint16_t length) {
 
 void BleElm327Component::process_response(const std::string &response) {
   ESP_LOGD(TAG, "<< %s", response.c_str());
-
+  ESP_LOGD(TAG, "process_response ENTER");
   if (elm_state_ != ElmState::READY)
     return;
 
@@ -273,7 +273,7 @@ void BleElm327Component::dispatch_payload_(const std::vector<uint8_t> &bytes) {
 }
 
 void BleElm327Component::process_response_line_(const std::string &line) {
-
+  ESP_LOGD(TAG, "LINE=[%s]", line.c_str());
   std::string s = line;
 
   while (!s.empty() && isspace((uint8_t)s.front()))
@@ -330,7 +330,7 @@ void BleElm327Component::process_response_line_(const std::string &line) {
     for (size_t i = 0; i + 1 < hex.size(); i += 2)
       multiline_buffer_.push_back(
         (uint8_t) strtoul(hex.substr(i,2).c_str(), nullptr, 16));
-
+      ESP_LOGD(TAG, "END OF MF");
     return;
   }
 
