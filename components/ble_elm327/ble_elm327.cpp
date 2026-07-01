@@ -50,7 +50,11 @@ float BleElm327Device::parse_float(const std::vector<uint8_t> &data) {
     uint8_t b = data.size() > 1 ? data[1] : 0;
     uint8_t c = data.size() > 2 ? data[2] : 0;
     uint8_t d = data.size() > 3 ? data[3] : 0;
-    return (*formula_)(a, b, c, d);
+    uint8_t e = data.size() > 4 ? data[4] : 0;
+    uint8_t f = data.size() > 5 ? data[5] : 0;
+    uint8_t g = data.size() > 6 ? data[6] : 0;
+    uint8_t h = data.size() > 7 ? data[7] : 0;
+    return (*formula_)(a, b, c, d, e, f, g, h);
   }
   float val = 0;
   for (size_t i = 0; i < data.size(); i++) val = val * 256.0f + data[i];
