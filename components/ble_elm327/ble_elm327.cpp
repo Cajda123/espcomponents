@@ -243,29 +243,118 @@ void BleElm327Component::on_notify(const uint8_t *data, uint16_t length) {
 void BleElm327Component::process_response(const std::string &response) {
   ESP_LOGD(TAG, "<< %s", response.c_str());
 
-  if (elm_state_ != ElmState::READY) return;
+  if (elm_state_ != ElmState::READY)
+    return;
 
-  const std::string &resp = response;
+  for (char c : response) {
+    if (c == '\r')
+      continue;
 
-  // Strip whitespace, CR, LF, '>' — works with both ATS0 (compact) and default (spaced) format
-  std::string hex;
-  for (char c : resp)
-    if (isxdigit(static_cast<unsigned char>(c))) hex += c;
+    if (c == '\n') {
+      if (!response_line_buffer_.empty()) {
+        process_response_line_(response_line_buffer_);
+        response_line_buffer_.clear();
+      }
+      continue;
+    }
 
-  // Must have at least 4 hex chars (1-byte response code + 1-byte PID/data)
-  if (hex.size() < 4) return;
-
-  // Parse consecutive 2-char groups into bytes
-  std::vector<uint8_t> bytes;
-  for (size_t i = 0; i + 1 < hex.size(); i += 2)
-    bytes.push_back(static_cast<uint8_t>(std::stoul(hex.substr(i, 2), nullptr, 16)));
-
-  if (bytes.empty()) return;
-
-  // Broadcast to all devices — each checks its own mode+PID and updates if matched
-  for (auto *d : devices_) {
-    d->on_receive(bytes);
+    response_line_buffer_.push_back(c);
   }
+
+  if (!response_line_buffer_.empty() &&
+      response_line_buffer_.back() == '>') {
+
+    process_response_line_(response_line_buffer_);
+    response_line_buffer_.clear();
+  }
+}
+
+void BleElm327Component::dispatch_payload_(const std::vector<uint8_t> &bytes) {
+  for (auto *d : devices_)
+    d->on_receive(bytes);
+}
+
+void BleElm327Component::process_response_line_(const std::string &line) {
+
+  std::string s = line;
+
+  while (!s.empty() && isspace((uint8_t)s.front()))
+    s.erase(s.begin());
+
+  while (!s.empty() && isspace((uint8_t)s.back()))
+    s.pop_back();
+
+  if (s.empty())
+    return;
+
+  //
+  // začátek multiframu
+  //
+  if (s == "013") {
+    multiline_active_ = true;
+    multiline_buffer_.clear();
+    return;
+  }
+
+  //
+  // konec multiframu
+  //
+  if (s == ">") {
+
+    if (multiline_active_) {
+      multiline_active_ = false;
+
+      ESP_LOGD(TAG, "MF payload len=%u",
+               (unsigned) multiline_buffer_.size());
+
+      dispatch_payload_(multiline_buffer_);
+      multiline_buffer_.clear();
+    }
+
+    return;
+  }
+
+  //
+  // řádek typu:
+  // 0: 62 1E 32 ...
+  //
+  if (multiline_active_
+      && s.size() > 2
+      && isdigit((uint8_t)s[0])
+      && s[1] == ':') {
+
+    std::string hex;
+
+    for (size_t i = 2; i < s.size(); i++)
+      if (isxdigit((uint8_t)s[i]))
+        hex += s[i];
+
+    for (size_t i = 0; i + 1 < hex.size(); i += 2)
+      multiline_buffer_.push_back(
+        (uint8_t) strtoul(hex.substr(i,2).c_str(), nullptr, 16));
+
+    return;
+  }
+
+  //
+  // obyčejný single frame
+  //
+  std::string hex;
+
+  for (char c : s)
+    if (isxdigit((uint8_t)c))
+      hex += c;
+
+  if (hex.size() < 4)
+    return;
+
+  std::vector<uint8_t> bytes;
+
+  for (size_t i = 0; i + 1 < hex.size(); i += 2)
+    bytes.push_back(
+      (uint8_t) strtoul(hex.substr(i,2).c_str(), nullptr, 16));
+
+  dispatch_payload_(bytes);
 }
 
 }  // namespace ble_elm327
