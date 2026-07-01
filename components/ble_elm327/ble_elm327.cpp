@@ -267,7 +267,7 @@ void BleElm327Component::process_response(const std::string &response) {
     if (!line.empty())
       process_response_line_(line);
   }
-
+}
 void BleElm327Component::dispatch_payload_(const std::vector<uint8_t> &bytes) {
   for (auto *d : devices_)
     d->on_receive(bytes);
