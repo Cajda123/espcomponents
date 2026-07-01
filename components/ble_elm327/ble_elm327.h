@@ -107,6 +107,8 @@ class BleElm327Component : public Component, public ble_client::BLEClientNode {
   bool send_command(const std::string &cmd);
   void on_notify(const uint8_t *data, uint16_t length);
   void process_response(const std::string &response);
+  void process_response_line_(const std::string &line);
+  void dispatch_payload_(const std::vector<uint8_t> &bytes);
 
   // BLE handles
   espbt::ESPBTUUID service_uuid_;
@@ -124,7 +126,9 @@ class BleElm327Component : public Component, public ble_client::BLEClientNode {
   // Tracks pre_commands currently applied on the ELM327 (e.g., last ATSH).
   // When a device's pre_commands differs, they are re-queued before its PID request.
   std::vector<std::string> current_pre_commands_;
-
+  std::string response_line_buffer_;
+  std::vector<uint8_t> multiline_buffer_;
+  bool multiline_active_{false};
   // Device registry & unified TX queue (init commands: dev=nullptr, sensor: dev=device)
   std::vector<BleElm327Device *> devices_;
   std::queue<TxItem> tx_queue_;
