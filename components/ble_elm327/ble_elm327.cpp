@@ -289,8 +289,13 @@ void BleElm327Component::process_response_line_(const std::string &line) {
   //
   // začátek multiframu
   //
-  if (s == "013") {
+// začátek multiframu: ELM hlásí délku payloadu jako 3 hex znaky, např. 008 nebo 013
+  if (s.size() == 3 &&
+      isxdigit((uint8_t)s[0]) &&
+      isxdigit((uint8_t)s[1]) &&
+      isxdigit((uint8_t)s[2])) {
     multiline_active_ = true;
+    multiline_expected_len_ = (size_t) strtoul(s.c_str(), nullptr, 16);
     multiline_buffer_.clear();
     return;
   }
@@ -303,11 +308,17 @@ void BleElm327Component::process_response_line_(const std::string &line) {
     if (multiline_active_) {
       multiline_active_ = false;
 
-      ESP_LOGD(TAG, "MF payload len=%u",
-               (unsigned) multiline_buffer_.size());
-
+      if (multiline_expected_len_ > 0 && multiline_buffer_.size() > multiline_expected_len_) {
+        multiline_buffer_.resize(multiline_expected_len_);
+      }
+      
+      ESP_LOGD(TAG, "MF payload len=%u expected=%u",
+               (unsigned) multiline_buffer_.size(),
+               (unsigned) multiline_expected_len_);
+      
       dispatch_payload_(multiline_buffer_);
       multiline_buffer_.clear();
+      multiline_expected_len_ = 0;
     }
 
     return;
