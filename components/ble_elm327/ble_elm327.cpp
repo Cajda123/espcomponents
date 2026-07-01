@@ -246,26 +246,24 @@ void BleElm327Component::process_response(const std::string &response) {
   if (elm_state_ != ElmState::READY)
     return;
 
-  for (char c : response) {
-    if (c == '\r')
-      continue;
+  response_line_buffer_ += response;
 
-    if (c == '\n') {
-      if (!response_line_buffer_.empty()) {
-        process_response_line_(response_line_buffer_);
-        response_line_buffer_.clear();
-      }
-      continue;
-    }
+  if (response_line_buffer_.find('>') == std::string::npos)
+    return;
 
-    response_line_buffer_.push_back(c);
-  }
+  std::string packet = response_line_buffer_;
+  response_line_buffer_.clear();
 
-  if (!response_line_buffer_.empty() &&
-      response_line_buffer_.back() == '>') {
+  size_t pos = 0;
+  while (pos < packet.size()) {
+    size_t end = packet.find('\n', pos);
+    std::string line = packet.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
+    pos = (end == std::string::npos) ? packet.size() : end + 1;
 
-    process_response_line_(response_line_buffer_);
-    response_line_buffer_.clear();
+    while (!line.empty() && (line.back() == '\r' || line.back() == '\n'))
+      line.pop_back();
+
+    process_response_line_(line);
   }
 }
 
@@ -299,7 +297,7 @@ void BleElm327Component::process_response_line_(const std::string &line) {
   //
   // konec multiframu
   //
-  if (s == ">") {
+  if (s.find('>') != std::string::npos) {
 
     if (multiline_active_) {
       multiline_active_ = false;
