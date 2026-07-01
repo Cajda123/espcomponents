@@ -129,6 +129,7 @@ class BleElm327Component : public Component, public ble_client::BLEClientNode {
   std::string response_line_buffer_;
   std::vector<uint8_t> multiline_buffer_;
   bool multiline_active_{false};
+  size_t multiline_expected_len_{0};
   // Device registry & unified TX queue (init commands: dev=nullptr, sensor: dev=device)
   std::vector<BleElm327Device *> devices_;
   std::queue<TxItem> tx_queue_;
