@@ -125,7 +125,10 @@ async def register_ble_elm327_device(var, config):
     if CONF_FORMULA in config:
         formula_ = await cg.process_lambda(
             config[CONF_FORMULA],
-            [(cg.uint8, "a"), (cg.uint8, "b"), (cg.uint8, "c"), (cg.uint8, "d")],
+            [
+                (cg.uint8, "a"), (cg.uint8, "b"), (cg.uint8, "c"), (cg.uint8, "d"),
+                (cg.uint8, "e"), (cg.uint8, "f"), (cg.uint8, "g"), (cg.uint8, "h"),
+            ],
             return_type=cg.float_,
         )
         cg.add(var.set_formula(formula_))
