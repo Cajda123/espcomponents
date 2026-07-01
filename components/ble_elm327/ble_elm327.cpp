@@ -256,16 +256,17 @@ void BleElm327Component::process_response(const std::string &response) {
 
   size_t pos = 0;
   while (pos < packet.size()) {
-    size_t end = packet.find('\n', pos);
-    std::string line = packet.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
+    size_t end = packet.find_first_of("\r\n", pos);
+  
+    std::string line = packet.substr(
+        pos,
+        end == std::string::npos ? std::string::npos : end - pos);
+  
     pos = (end == std::string::npos) ? packet.size() : end + 1;
-
-    while (!line.empty() && (line.back() == '\r' || line.back() == '\n'))
-      line.pop_back();
-
-    process_response_line_(line);
+  
+    if (!line.empty())
+      process_response_line_(line);
   }
-}
 
 void BleElm327Component::dispatch_payload_(const std::vector<uint8_t> &bytes) {
   for (auto *d : devices_)
@@ -298,7 +299,7 @@ void BleElm327Component::process_response_line_(const std::string &line) {
   // konec multiframu
   //
   if (s.find('>') != std::string::npos) {
-
+    ESP_LOGD(TAG, "END OF MF");
     if (multiline_active_) {
       multiline_active_ = false;
 
@@ -330,7 +331,7 @@ void BleElm327Component::process_response_line_(const std::string &line) {
     for (size_t i = 0; i + 1 < hex.size(); i += 2)
       multiline_buffer_.push_back(
         (uint8_t) strtoul(hex.substr(i,2).c_str(), nullptr, 16));
-      ESP_LOGD(TAG, "END OF MF");
+      
     return;
   }
 
